@@ -36,7 +36,7 @@ foreach($result as $raw){
 	echo $raw->name."<br/>";
 }
 echo "==================隔1======================="."<br/>";
-
+//数据库query构造器
 $query = db_select('node','n');
 $query
 	->condition('type','general_task')

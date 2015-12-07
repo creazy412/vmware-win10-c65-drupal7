@@ -1,0 +1,25 @@
+/**
+ * hskjuser hskjuser.css
+ *
+ * Use this file to add your custom styles.
+ *
+ * You can change the name of this file, just
+ * remember to update the name in the info file
+ * as well.
+ */
+
+#menu-bar .block {margin-bottom: 0px}
+
+
+/*2014-09-27添加*/
+.views-view-grid tbody td, .views-view-grid tbody th{ padding:0; border:none;}
+.views-view-grid tbody article .node-content {padding: 0;height:327px; overflow:hidden;}
+.views-view-grid tbody td{ width:295px;}
+.views-view-grid tbody td.col-3{ width:245px;}
+.views-view-grid tbody tr{ height:367px; }
+.views-view-grid tbody .field-type-image img {background:none;padding:0; width:245px; height:245px;}
+.views-view-grid tbody h2{ font-size:14px; font-weight:normal; color:#666;}
+.views-view-grid tbody .commerce-product-field-field-listprice .field-type-commerce-price{font-size:14px; font-weight:normal; padding-top:10px; height:24px; line-height:24x;color:#666;}
+.views-view-grid tbody .commerce-product-field-field-listprice .field-type-commerce-price .even{text-decoration: line-through;}
+.views-view-grid tbody .commerce-product-field-commerce-price .field-type-commerce-price{ color:#e4393c; font-size:18px; height:24px; line-height:24px;}
+.views-view-grid tbody h4{height:24px; line-height:24px; font-weight:normal; font-size:18px; display:block;}

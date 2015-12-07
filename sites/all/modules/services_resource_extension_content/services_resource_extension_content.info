@@ -1,0 +1,11 @@
+name = Services resource extension content
+description = Creates additional services resource to request html content
+package = Services
+dependencies[] = services
+core = 7.x
+; Information added by Drupal.org packaging script on 2014-02-12
+version = "7.x-1.8"
+core = "7.x"
+project = "services_resource_extension_content"
+datestamp = "1392201212"
+

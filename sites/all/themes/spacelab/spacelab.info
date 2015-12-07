@@ -1,0 +1,56 @@
+name        = Spacelab
+description = A theme based on Radix.
+screenshot  = screenshot.png
+core        = 7.x
+
+; Base - Radix
+base theme  = radix
+
+
+regions[header_top_left] = Header Top Left
+regions[header_top_right] = Header Top Right
+regions[header] = Header
+regions[search_box]     = Search Box
+regions[navigation] = Navigation
+regions[banner] = Banner
+regions[highlighted] = Highlighted
+regions[promoted] = Promoted
+regions[content] = Content
+regions[sidebar_first] = Sidebar First
+regions[sidebar_second] = Sidebar Second
+regions[bottom_content] = Bottom Content
+regions[footer_first] = Footer First
+regions[footer_second] = Footer Second
+regions[footer_third] = Footer Third
+regions[footer_fourth] = Footer Fourth
+regions[footer_fifth] = Footer Fifth
+regions[footer_sixth] = Footer Sixth
+regions[footer] = Footer
+regions[help] = Help
+;regions[page_top] = Page top
+;regions[page_bottom] = Page bottom
+
+; Panels
+plugins[panels][layouts] = panels/layouts
+plugins[panels][styles] = panels/styles
+
+; CSS - General
+stylesheets[all][]     = assets/stylesheets/screen.css
+stylesheets[print][]   = assets/stylesheets/print.css
+stylesheets[all][]     = assets/stylesheets/style.css
+
+; CSS - Conditional
+stylesheets-conditional[lte IE 9][all][] = assets/stylesheets/ie.css
+stylesheets-conditional[IE 7][all][] = assets/stylesheets/ie7.css
+stylesheets-conditional[IE 8][all][] = assets/stylesheets/ie8.css
+
+; Javascript
+scripts[] = assets/javascripts/script.js
+
+
+; Information added by Drupal.org packaging script on 2014-06-14
+version = "7.x-3.0"
+core = "7.x"
+project = "radix"
+
+

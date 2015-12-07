@@ -1,0 +1,266 @@
+<?php
+
+/**
+ * @file
+ * The commerce unionpay payment method.
+ */
+
+define('COMMERCE_UNIONPAY_CONSUME', '01');
+define('COMMERCE_UNIONPAY_RESP_SUCCESS', '00');
+
+/**
+ * Implements hook_menu().
+ */
+function commerce_unionpay_menu() {
+  // Add a menu callback for Unionpay's notification on operation processing.
+  $items['commerce_unionpay/notify'] = array(
+    'page callback' => 'commerce_unionpay_process_notify',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'commerce_unionpay.pages.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_commerce_payment_method_info().
+ */
+function commerce_unionpay_commerce_payment_method_info() {
+  $payment_methods = array();
+
+  // Declare Unionpay payment method to redirect to external site.
+  $payment_methods['unionpay'] = array(
+    'base' => 'commerce_unionpay',
+    'title' => t('Unionpay'),
+    'terminal' => FALSE,
+    'offsite' => TRUE,
+    'offsite_autoredirect' => TRUE,
+  );
+
+  return $payment_methods;
+}
+
+/**
+ * Returns the default settings for the PayPal WPS payment method.
+ */
+function commerce_unionpay_default_settings() {
+  return array(
+    'merId'         => '105550149170027', // test id
+    'merAbbr'         => '商户名称',  // test abbr
+    'security_key'  => '88888888',  // test key
+    'server'        => 'sandbox',
+  );
+}
+
+/**
+ * Payment method callback: settings form.
+ */
+function commerce_unionpay_settings_form($settings = array()) {
+  $form = array();
+
+  // Merge default settings into the stored settings array.
+  $settings = (array) $settings + commerce_unionpay_default_settings();
+
+  $form['merId'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Merchant ID',
+    '#default_value' => $settings['merId'],
+  );
+
+  $form['merAbbr'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Merchant name',
+    '#default_value' => $settings['merAbbr'],
+  );
+
+  $form['security_key'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Security key',
+    '#default_value' => $settings['security_key'],
+  );
+
+  $form['server'] = array(
+    '#type' => 'radios',
+    '#title' => t('Unionpay server'),
+    '#options' => array(
+      'sandbox' => t('Sandbox - use for testing'),
+      'prelive' => t('Prelive - use for pre online'),
+      'live' => t('Live - use for processing real transactions'),
+    ),
+    '#default_value' => $settings['server'],
+  );
+
+  return $form;
+}
+
+/**
+ * Payment method callback: adds a message to the submission form if enabled in the payment method settings.
+ */
+function commerce_unionpay_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
+  $form['unionpay_information'] = array(
+    '#markup' => '<span class="commerce-unionpay-info">' . t('(Continue with checkout to complete payment via Unionpay.)') . '</span>',
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function commerce_unionpay_form_commerce_checkout_form_alter(&$form, &$form_state) {
+  // If this checkout form contains the payment method radios...
+  if (!empty($form['commerce_payment']['payment_method']['#options'])) {
+    // Loop over its options array looking for a Unionpay option.
+    foreach ($form['commerce_payment']['payment_method']['#options'] as $key => &$value) {
+      list($method_id, $rule_name) = explode('|', $key);
+
+      // If we find Unionpay...
+      if ($method_id == 'unionpay') {
+        // Prepare the replacement radio button text with icons.
+        $title = t('Unionpay');
+        $icon = theme('image', array(
+          'path' => drupal_get_path('module', 'commerce_unionpay') . '/images/unionpay.png',
+          'title' => $title,
+          'alt' => $title,
+          'attributes' => array('class' => 'commerce-unionpay-icon'),
+        ));
+        $value = $icon . $title;
+
+        // Add the CSS.
+        $form['commerce_payment']['payment_method']['#attached']['css'][] = drupal_get_path('module', 'commerce_unionpay') . '/theme/commerce_unionpay.theme.css';
+
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * Payment method callback: redirect form.
+ */
+function commerce_unionpay_redirect_form($form, &$form_state, $order, $payment_method) {
+  return commerce_unionpay_order_form($form, $form_state, $order, $payment_method['settings']);
+}
+
+/**
+ * Builds a Unionpay form from an order object.
+ *
+ * @param $order
+ *   The fully loaded order being paid for.
+ * @param $settings
+ *   An array of settings used to build out the form.
+ *
+ * @return
+ *   A renderable form array.
+ */
+function commerce_unionpay_order_form($form, &$form_state, $order, $settings) {
+  $wrapper = entity_metadata_wrapper('commerce_order', $order);
+
+  $currency_code = $wrapper->commerce_order_total->currency_code->value();
+  $currencies = commerce_currencies();
+  $currency = $currencies[$currency_code];
+
+  $amount = $wrapper->commerce_order_total->amount->value();
+
+  // Build the data array that will be translated into hidden form values.
+  $data = array(
+    // These field must have but can be empty.
+    'origQid'             => "",
+    'acqCode'             => "",
+    'merCode'             => "",
+    'commodityUrl'        => "",
+    'commodityName'       => "",
+    'commodityUnitPrice'  => "",
+    'commodityQuantity'   => "",
+    'commodityDiscount'   => "",
+    'transferFee'         => "",
+    'customerName'        => "",
+    'defaultPayType'      => "",
+    'defaultBankNumber'   => "",
+    'transTimeout'        => "",
+    'merReserved'         => "",
+
+    // Pay params.
+    'version' => '1.0.0',
+    'charset' => 'UTF-8',
+    'merId'   => $settings['merId'],
+    'acqCode' => '',
+    'merCode' => '',
+    'merAbbr' => $settings['merAbbr'],
+
+    'transType'     => COMMERCE_UNIONPAY_CONSUME,
+    'orderAmount'   => $amount,
+    'orderNumber'   => date('YmdHis', $order->created) . $order->order_number,
+    'orderTime'     => date('YmdHis', $order->created),
+    'orderCurrency' => $currency['numeric_code'],
+    'customerIp'    => $_SERVER['REMOTE_ADDR'],
+    'frontEndUrl'   => url('checkout/' . $order->order_id . '/payment/return/' . $order->data['payment_redirect_key'], array('absolute' => TRUE)),
+    'backEndUrl'   => url('commerce_unionpay/notify', array('absolute' => TRUE)),
+  );
+
+  // Allow modules to alter parameters of the API request.
+  drupal_alter('commerce_unionpay_order_form_data', $data, $order);
+
+  // Signature.
+  $data['signature'] = commerce_unionpay_sign($data, 'md5', $settings);
+  $data['signMethod'] = 'md5';
+
+  $form['#action'] = commerce_unionpay_server_url($settings['server']);
+
+  foreach ($data as $name => $value) {
+    if (!empty($value)) {
+      $form[$name] = array('#type' => 'hidden', '#value' => $value);
+    }
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Proceed to Unionpay'),
+  );
+
+  return $form;
+}
+
+/**
+ * Returns the URL to the specified PayPal WPS server.
+ *
+ * @param $server
+ *   Either sandbox or live indicating which server to get the URL for.
+ *
+ * @return
+ *   The URL to use to submit requests to the PayPal WPS server.
+ */
+function commerce_unionpay_server_url($server) {
+  switch ($server) {
+    case 'sandbox':
+      return 'http://58.246.226.99/UpopWeb/api/Pay.action';
+
+    case 'prelive':
+      return 'https://www.epay.lxdns.com/UpopWeb/api/Pay.action';
+
+    case 'live':
+      return 'https://unionpaysecure.com/api/Pay.action';
+  }
+}
+
+/**
+ * Helper function to provide an encrypted signature to be passed to Unionpay.
+ */
+function commerce_unionpay_sign($params, $sign_method, $settings) {
+  if (strtolower($sign_method) == "md5") {
+    ksort($params);
+    $sign_str = "";
+    foreach ($params as $key => $val) {
+      if (in_array($key, array())) {
+        continue;
+      }
+      $sign_str .= sprintf("%s=%s&", $key, $val);
+    }
+    return md5($sign_str . md5($settings['security_key']));
+  }
+  /* TODO: elseif (strtolower($sign_method) == "rsa")  */
+  else {
+    throw new Exception("Unknown sign_method");
+  }
+}

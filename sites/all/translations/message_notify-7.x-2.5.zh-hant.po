@@ -1,0 +1,22 @@
+# Chinese, Traditional translation of Message notify (7.x-2.5)
+# Copyright (c) 2013 by the Chinese, Traditional translation team
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Message notify (7.x-2.5)\n"
+"POT-Creation-Date: 2013-04-23 12:13+0000\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Language-Team: Chinese, Traditional\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+msgid "None"
+msgstr "無"
+msgid "Message"
+msgstr "訊息"
+msgid "Email"
+msgstr "電子郵件"
+msgid "SMS"
+msgstr "SMS"

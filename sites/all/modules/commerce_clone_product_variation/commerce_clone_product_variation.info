@@ -1,0 +1,14 @@
+name = Commerce clone product variation
+description = Allows a quick and easy way to clone a product variation type in commerce kickstarter
+package = Commerce (contrib)
+core = 7.x
+dependencies[] = commerce_backoffice_product
+dependencies[] = commerce_product_ui
+configure = admin/commerce/config/product-variation-types/clone
+
+; Information added by  packaging script on 2013-11-27
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "commerce clone product variation"
+datestamp = "1385557411"
+

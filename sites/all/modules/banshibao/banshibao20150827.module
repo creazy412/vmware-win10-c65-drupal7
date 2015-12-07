@@ -1,0 +1,305 @@
+<?php
+
+/**
+ * @file
+ * banshibao module.
+ */
+ 
+/*
+  implementtation hookup_views_query_alter	
+*/ 
+function banshibao_views_query_alter(&$view, &$query){
+  if ($view->name == 'my_message_box' && $view->exposed_raw_input['timestamp'] > 0) {
+    // Traverse through the 'where' part of the query.
+    foreach ($query->where as &$condition_group) {
+      foreach ($condition_group['conditions'] as &$condition) {
+        // If this is the part of the query filtering on title, chang the
+        // condition to filter on node ID.
+				$field = print_r($condition['field'],  TRUE);
+        if (strstr($field,"message.timestamp")!==FALSE) {
+          $condition = array(
+            'field' => 'message.timestamp', 
+            'value' => strtotime($view->exposed_raw_input['timestamp']), 
+            'operator' => '>',						            
+          );
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_rules_event_info().
+ *
+ */
+function banshibao_rules_event_info() {
+  $items = array();
+
+  $items['after_deactive_product'] = array(
+    'label' => t('After Product status changed'),
+    'group' => t('Banshibao'),
+    'variables' => array(
+      'product' => array(
+        'label' => t('Product'),
+        'type' => 'commerce_product',
+        'skip save' => TRUE,
+      ),
+		),
+  );
+
+  $items['after_reset_task_order'] = array(
+    'label' => t('After reset order status to cart'),
+    'group' => t('Banshibao'),
+    'variables' => array(
+      'order' => array(
+        'label' => t('Order'),
+        'type' => 'commerce_order',
+        'skip save' => TRUE,
+      ),
+      'display_node' => array(
+        'label' => t('Display Node'),
+        'type' => 'node',
+        'skip save' => TRUE,
+      ),
+		),
+  );
+
+  return $items;
+}
+/**
+ * Implements hook_rules_action_info().
+ */
+function banshibao_rules_action_info() {
+  $actions = array();
+
+  $actions['banshibao_deactive_product_action'] = array(
+    'label' => t('Banshibao: Deactive other bid of task, when there is a task in hand'),
+    'parameter' => array(
+      'account' => array(
+        'type' => 'user',
+        'label' => t('User'),
+      ),
+      'starttime' => array(
+        'type' => 'date',
+        'label' => t('Start Date'),
+      ),
+      'endtime' => array(
+        'type' => 'date',
+        'label' => t('End Date'),
+      ),
+    ),
+    'group' => t('Banshibao'),
+    'callbacks' => array(
+      'execute' => 'banshibao_deactive_product_action',
+    ),
+  );
+
+  $actions['banshibao_test_action'] = array(
+    'label' => t('Banshibao: test program'),
+    'parameter' => array(
+      'account' => array(
+        'type' => 'text',
+        'label' => t('User'),
+      ),
+    ),
+    'group' => t('Banshibao'),
+    'callbacks' => array(
+      'execute' => 'banshibao_rollback_task_order',
+    ),
+  );
+
+  return $actions;
+}
+
+/*
+	use search api search node between start_date and end_date
+*/
+function banshibao_deactive_product_action($account, $starttime, $endtime) {
+  $options = array(
+  'parse mode' => 'terms',
+  'limit' => 500,
+  'offset' => 0,
+  );
+	$uid =$account->uid;
+	watchdog('debug', '<pre>@value</pre>', array('@value' => print_r($account->uid,  TRUE)));
+  // Initialize the query object.
+  $query = search_api_query('product_display', $options);
+  // Set the filters, transforming the query array in a SearchAPIQueryFilter
+  // object.
+    $query_filter = new SearchApiQueryFilter();
+		$query_filter->condition('field_product:field_bidder',$uid);
+		$query_filter->condition('promote',1);
+		$query_filter->condition('status',1);
+		
+		$time_filter = banshibao_task_time_filter($starttime, $endtime);
+
+		$query_filter->filter($time_filter);
+    $query->filter($query_filter);
+
+  // Also set sorts.
+    $query->sort('nid', 'ASC');
+  
+
+  $result = $query->execute();
+	watchdog('debug', '<pre>@value</pre>', array('@value' => print_r($result,  TRUE)));
+  
+  if (empty($result['results']) || !is_array($result['results'])) {
+    return FALSE;
+  }
+	
+  $entity_type = $query->getIndex()->item_type;
+	
+	foreach($result['results'] as $key => $values){	
+		watchdog('debug', '<pre>@value</pre>', array('@value' => print_r($key,  TRUE)));
+		$node = entity_load_single('node', $key);
+		$product_display=entity_metadata_wrapper('node',$node);
+		foreach($product_display->{'field_product'} as $delta => $product){
+		 	if ($product->{'field_bidder'}->raw()==$uid) {
+				$product->status->set(0);
+				entity_save('commerce_product',$product);
+				rules_invoke_event('after_deactive_product', $product);
+			}		
+		}
+		//rollback promote=1
+		if ($node->promote==0) {
+		 	 banshibao_rollback_task_order($node);
+			 $product_display->promote->set(1);
+			 entity_save('node', $node);
+		}
+	}
+}
+
+
+function banshibao_rollback_task_order($node){
+	$query = new EntityFieldQuery();
+	$query->entityCondition('entity_type', 'commerce_order')
+	      ->range(0, 100)
+				->propertyCondition('type','commerce_order')
+				->propertyCondition('status','checkout_review')
+				->fieldCondition('field_display','target_id',$node->nid);
+	$result = $query->execute();
+	if (!empty($result)){
+		$log='to recaculate product price is required!';
+		$entities = entity_load('commerce_order', array_keys($result['commerce_order']));
+    foreach ($entities as $id => $order) {
+		  commerce_order_status_update($order, 'cart',FALSE,NULL,$log);
+		  rules_invoke_event('after_reset_task_order', $order,$node);
+		}
+	}
+}
+
+/*
+获取用户订单的时间段列表
+SELECT b.order_id, d.field_start_date_value, e.field_end_date_value, f.field_status_value
+FROM commerce_line_item a
+LEFT JOIN commerce_order b ON a.order_id = b.order_id
+LEFT JOIN field_data_field_display c ON c.entity_type =  'commerce_order' AND c.entity_id = b.order_id AND c.bundle = b.type
+left join field_data_field_status f on f.bundle=a.type and f.entity_id=a.line_item_id and f.entity_type='commerce_line_item'
+LEFT JOIN field_data_field_start_date d ON d.entity_type =  'node'
+AND d.bundle =  'general_task'
+AND d.entity_id = c.field_display_target_id
+LEFT JOIN field_data_field_end_date e ON e.entity_type =  'node'
+AND e.bundle =  'general_task'
+AND e.entity_id = c.field_display_target_id
+WHERE b.status =  'checkout_complete'
+AND a.type =  'product'
+AND a.line_item_label LIKE  'USER-174%'
+and (f.field_status_value is null or f.field_status_value<>2)
+
+
+return:
+[1113] => Array
+        (
+            [order_id] => 1113
+            [field_start_date_value] => 1439497800
+            [field_end_date_value] => 1439512200
+        )
+*/
+
+function get_user_active_task($uid){
+	$sql="SELECT b.order_id, d.field_start_date_value, e.field_end_date_value
+				FROM commerce_line_item a
+				LEFT JOIN commerce_order b ON a.order_id = b.order_id
+				LEFT JOIN field_data_field_display c ON c.entity_type =  'commerce_order' AND c.entity_id = b.order_id AND c.bundle = b.type
+				left join field_data_field_status f on f.bundle=a.type and f.entity_id=a.line_item_id and f.entity_type='commerce_line_item'
+				LEFT JOIN field_data_field_start_date d ON d.entity_type =  'node'
+				AND d.bundle =  'general_task'
+				AND d.entity_id = c.field_display_target_id
+				LEFT JOIN field_data_field_end_date e ON e.entity_type =  'node'
+				AND e.bundle =  'general_task'
+				AND e.entity_id = c.field_display_target_id
+				WHERE b.status =  'pending'
+				AND a.type =  'product'
+				AND a.line_item_label LIKE :sku 
+				and (COALESCE( f.field_status_value, 0 )=0)
+			";	
+  $results =db_query($sql, array(':sku'=>'USER-'.$uid.'%'))->fetchAllAssoc('order_id',PDO::FETCH_ASSOC);
+	return $results;
+}
+
+function banshibao_task_time_filter($starttime, $endtime) {
+	$process_filter = new SearchApiQueryFilter('OR');
+
+	$process_filter1 = new SearchApiQueryFilter('AND');
+	$process_filter1->condition('field_start_date', $starttime, '>');
+	$process_filter1->condition('field_start_date', $endtime,'<');
+
+	$process_filter2 = new SearchApiQueryFilter('AND');
+	$process_filter2->condition('field_end_date', $starttime, '>');
+	$process_filter2->condition('field_end_date', $endtime,'<');
+
+	$process_filter3 = new SearchApiQueryFilter('AND');
+	$process_filter3->condition('field_start_date', $starttime, '<=');
+	$process_filter3->condition('field_end_date', $endtime,'>=');
+
+	$process_filter->filter($process_filter1);
+	$process_filter->filter($process_filter2);
+	$process_filter->filter($process_filter3);
+	
+	return $process_filter;
+}
+
+function validate_user_time($uid, $starttime, $endtime){
+	$user_active_orders = get_user_active_task($uid);
+watchdog('debug', 'active_orders=<pre>@value</pre>', array('@value' => print_r($user_active_orders,  TRUE)));	
+	foreach($user_active_orders as $order_id=> $data){
+		$t1 = $data['field_start_date_value'];
+		$t2 = $data['field_end_date_value'];
+    watchdog('debug', 't1=<pre>@value</pre>', array('@value' => print_r($t1,  TRUE)));		
+    watchdog('debug', 't2=<pre>@value</pre>', array('@value' => print_r($t2,  TRUE)));		
+		
+		if (($starttime>$t1 && $starttime<$t2) || ($endtime>$t1 && $endtime <$t2) || ($starttime<=$t1 && $endtime>=$t2)){
+			return FALSE;
+		}		
+	}	
+	
+	return TRUE;
+}
+
+
+/**
+ * Alter results of the services call.
+ * 
+ * hook_services_request_postprocess_alter
+ * 
+ * @param $controller
+ *   Controller definition
+ * @param array $args
+ *   Arguments passed to services callback
+ * @param array $result
+ *   Array of results that can be altered
+ *
+ * @see services_controller_execute()
+ * @see services.runtime.inc
+ */
+ 
+function banshibao_services_request_postprocess_alter($controller, $args, &$result) {
+
+//watchdog('debug', 'controller=<pre>@value</pre>', array('@value' => print_r($controller,  TRUE)));
+//watchdog('debug', 'arg=<pre>@value</pre>', array('@value' => print_r($args,  TRUE)));
+//watchdog('debug', 'result=<pre>@value</pre>', array('@value' => print_r($result,  TRUE)));
+}
+
+/**
+ * @} End of "banshibao module".
+ */

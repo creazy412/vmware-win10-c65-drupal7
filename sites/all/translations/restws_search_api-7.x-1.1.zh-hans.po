@@ -1,0 +1,26 @@
+# Chinese, Simplified translation of RestWS Search API Integration (7.x-1.1)
+# Copyright (c) 2013 by the Chinese, Simplified translation team
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: RestWS Search API Integration (7.x-1.1)\n"
+"POT-Creation-Date: 2013-10-26 13:55+0000\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Language-Team: Chinese, Simplified\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+msgid "No limit"
+msgstr "无限制"
+msgid "Soft limit"
+msgstr "软限制"
+msgid "Limits the number of displayed facets via JavaScript."
+msgstr "通过 JavaScript 限制显示的切面数。"
+msgid "Expand hierarchy"
+msgstr "展开层级"
+msgid ""
+"Show the entire tree regardless of whether the parent items are "
+"active."
+msgstr "无论父项目是否启用，显示整个树形。"

@@ -1,0 +1,13 @@
+name = SMS HUYI
+description = Provides ihuyi integration for SMS Framework.
+core = 7.x
+package = SMS Framework
+dependencies[] = sms
+files[] = sms_ihuyi.module
+
+; Information added by drupal.org packaging script on 2014-7-15
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "sms_ihuyi"
+datestamp = "1380628932"
+

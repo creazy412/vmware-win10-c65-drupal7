@@ -1,0 +1,85 @@
+<?php
+
+/**
+ * @file
+ * Provide mobile verified sms integration with Services.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function services_sms_resource_permission() {
+  return array(
+    'send sms' => array(
+      'title' => t('send verified code to user'),
+      'description' => t('send verified code to user by sms'),
+    ),
+    'verified code' => array(
+      'title' => t('verified code'),
+      'description' => t('Verified entered Code by User.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_services_resources().
+ */
+function services_sms_resource_services_resources() {
+  // File where resources stored.
+  $file = array(
+    'type' => 'inc',
+    'module' => 'services_sms_resource',
+    'name' => 'services_sms_resource.resource'
+  );
+
+  $definition = array(
+    'verify_user' => array(
+      'actions' => array(
+
+        // Send verified Code.
+        'sendsms' => array(
+          'help' => t('Send Verified Code by SMS.'),
+          'file' => $file,
+          'callback' => 'services_sms_resource_sendsms',
+          'args' => array(
+            array(
+              'name' => 'mobile',
+              'optional' => FALSE,
+              'source' => array('data' => 'mobile'),
+              'type' => 'string',
+              'description' => 'the mobile number send to.',
+            ),
+          ),
+          'access arguments' => array('send sms'),
+        ),
+
+        // Verified Code.
+        'verified' => array(
+          'help' => t('Verified entered Code by User.'),
+          'file' => $file,
+          'callback' => 'services_sms_resource_verified',
+          'args' => array(
+            array(
+              'name' => 'code',
+              'optional' => FALSE,
+              'source' => array('data' => 'code'),
+              'type' => 'string',
+            ),
+            array(
+              'name' => 'mobile',
+              'optional' => FALSE,
+              'source' => array('data' => 'mobile'),
+              'type' => 'string',
+            ),
+          ),
+          'access arguments' => array('verified code'),
+        )
+      ),
+
+    ),
+  );
+
+  return $definition;
+}
+
+

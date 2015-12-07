@@ -1,0 +1,470 @@
+<?php
+/**
+ * @file
+ * Additional services resource specific for Content delivery
+ */
+
+/**
+ * Implements hook_node_update().
+ */
+function services_resource_extension_content_node_update($node) {
+	services_resource_extension_content_clear_response_cache($node->nid);
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function services_resource_extension_content_node_insert($node) {
+	services_resource_extension_content_clear_response_cache($node->nid);
+}
+
+/**
+ * Clear page cache for html content response for a node.
+ *
+ * @param $nid int
+ *   Node id to clear cache for.
+ */
+function services_resource_extension_content_clear_response_cache($nid) {
+  // Formats to clear cache for.
+  $formats = array('', '.json', '.xml');
+  // Set the base path url.
+  $base_url = 'http://' . $_SERVER['HTTP_HOST'] . base_path();
+  // Get all services endpoints to loop for ones using html resource.
+  $endpoints = services_endpoint_load_all();
+  foreach ($endpoints as $ep) {
+    // Check if endpoint using html content resource.
+    if (!empty($ep->resources['html_content'])) {
+      // Loop each response format to clear cache for.
+      foreach ($formats as $f) {
+        // Set the cid to clear cache for layout.
+        $cid = $base_url . $ep->path . '/html_content/layout' . $f . '?node=' . $nid;
+        // Clear page cache.
+        cache_clear_all($cid, 'cache_page', TRUE);
+        // Set the cid to clear cache for blocks.
+        $cid = $base_url . $ep->path . '/html_content/block' . $f . '?node=' . $nid;
+        // Clear page cache.
+        cache_clear_all($cid, 'cache_page', TRUE);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function services_resource_extension_content_menu() {
+  return array(
+    'admin/structure/services/content_cache_settings' => array(
+      'title' => t('Content Cache settings'),
+      'description' => t('Set cache lifetime for page layout and custom block request.'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('services_resource_extension_content_cache_settings'),
+      'access arguments' => array('administer services'),
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'services_resource_extension_content.admin.inc'
+    ),
+  );
+}
+
+/**
+ * Implements Hook_theme().
+ */
+function services_resource_extension_content_theme() {
+  return array(
+    'services_content_html' => array(
+      'variables' => array('html' => ''),
+    ),
+    'services_resource_extension_content_custom_blocks' => array(
+      'render element' => 'element',
+      'file' => 'services_resource_extension_content.admin.inc'
+    ),
+  );
+}
+
+/**
+ * Implements hook_services_resources().
+ */
+function services_resource_extension_content_services_resources() {
+  return array(
+    'html_content' => array(
+      'retrieve' => array(
+        'help' => t('Use to get html content.'),
+        'callback' => 'services_resource_extension_content_get_content',
+        'args' => array(
+          array(
+            'name' => 'object',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'string',
+            'description' => t('The content object to get, should be BLOCK or LAYOUT.'),
+          ),
+          array(
+            'name' => 'node',
+            'optional' => FALSE,
+            'source' => array('param' => 'node'),
+            'type' => 'int',
+            'description' => t('Node ID to build content for, send 0 to get blank page template.'),
+          ),
+          array(
+            'name' => 'element',
+            'optional' => TRUE,
+            'source' => array('param' => 'element'),
+            'type' => 'string',
+            'description' => t('The element within the object to get.'),
+          ),
+          array(
+            'name' => 'username',
+            'optional' => TRUE,
+            'source' => array('param' => 'user'),
+            'type' => 'string',
+            'description' => t('The USERs username value.'),
+          ),
+          array(
+            'name' => 'template',
+            'optional' => TRUE,
+            'source' => array('param' => 'template'),
+            'type' => 'string',
+            'description' => t('Specify a template to return for the content, only used for layout requests.'),
+          ),
+        ),
+        'access callback' => 'services_resource_extension_content_access',
+      ),
+      'create' => array(
+        'help' => t('Use to get html content.'),
+        'callback' => 'services_resource_extension_content_get_content',
+        'args' => array(
+          array(
+            'name' => 'object',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'string',
+            'description' => t('The content object to get.'),
+          ),
+          array(
+            'name' => 'node',
+            'optional' => FALSE,
+            'source' => array('data' => 'node'),
+            'type' => 'int',
+            'description' => t('Node ID to build content for, send 0 to get blank page template.'),
+          ),
+          array(
+            'name' => 'element',
+            'optional' => TRUE,
+            'source' => array('data' => 'element'),
+            'type' => 'string',
+            'description' => t('The element within the object to get.'),
+          ),
+          array(
+            'name' => 'username',
+            'optional' => TRUE,
+            'source' => array('data' => 'user'),
+            'type' => 'string',
+            'description' => t('The USERs username value.'),
+          ),
+          array(
+            'name' => 'template',
+            'optional' => TRUE,
+            'source' => array('data' => 'template'),
+            'type' => 'string',
+            'description' => t('Specify a template to return for the content, only used for layout requests.'),
+          ),
+        ),
+        'access callback' => 'services_resource_extension_content_access',
+      ),
+    ),
+  );
+}
+
+/**
+ * Check user access to resource.
+ *
+ * @param $object string
+ *   Content object to get.
+ *
+ * @return boolean
+ *   Access permission.
+ */
+function services_resource_extension_content_access($object, $node, $user, $element){
+  // Check no provided is valid, excluding request for node=0.
+  if (!is_numeric($node)) {
+    return false;
+  }
+  elseif ($node != 0) {
+    $node_obj = node_load($node);
+    if (empty($node_obj)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Implements hook_custom_theme().
+ *
+ * Define theme for content services.
+ */
+function services_resource_extension_content_custom_theme() {
+  if (preg_match('/\/html_content\/(layout|block)$/', $_GET['q'])) {
+    $use_theme = variable_get('theme_default', '');
+    $overwrite_theme = module_invoke_all('services_content_overwrite_theme');
+    if (!empty($overwrite_theme)) {
+      if (is_array($overwrite_theme)) {
+        $use_theme = $overwrite_theme[0];
+      }
+      else {
+        $use_theme = $overwrite_theme;
+      }
+    }
+    return $use_theme;
+  }
+}
+
+/**
+ * Ensure correct front end theme is set up for content.
+ */
+function services_resource_extension_content_set_theme() {
+  drupal_theme_initialize();
+}
+
+/**
+ * get blocks for all regions in the theme.
+ *
+ * @return array
+ *   Blocks positioned in each region.
+ */
+function services_resource_extension_content_get_block_placements() {
+  global $theme_key;
+  $placements = array();
+  $all_theme_info = _system_rebuild_theme_data();
+  if (empty($all_theme_info[$theme_key])) {
+    return $placements;
+  }
+  $theme = $all_theme_info[$theme_key];
+  foreach ($theme->info['regions'] as $region => $region_name) {
+    // Get blocks for region.
+    $blocks = block_list($region);
+    // Build placement holders.
+    $placements[$region] = '';
+    foreach ($blocks as $b) {
+      $placements[$region] .= '[drupalblock id=' . $b->bid . ']'."\n";
+    }
+  }
+  return $placements;
+}
+
+/**
+ * Handle resource response for page layout.
+ *
+ * @param $object string
+ *   Content object to get.
+ * @param $node int
+ *   Node id for content.
+ * @param $element string
+ *   Block element for content.
+ * @param $oucu string
+ *   OUCU to get content based on.
+ * @param $template string
+ *   Optional template override.
+ *
+ * @return array
+ *   Response content.
+ */
+function services_resource_extension_content_get_content($object, $node, $element, $username, $template){
+  global $user;
+  // Set user, if username passed.
+  if (!empty($username)) {
+    $current_user = user_load_by_name($username);
+    if (!empty($current_user)) {
+      $user = $current_user;
+      drupal_session_regenerate();
+    }
+  }
+  // Load theme to run content from.
+  services_resource_extension_content_set_theme();
+  // Get content based on object param.
+  switch(strtolower($object)){
+    case 'layout':
+      if ($node == 0) {
+        return services_resource_extension_content_get_blank_layout($template);
+      }
+      else {
+	    //begin 2015 02 03 新版上后删除这里。
+		/*if($template=='house_rent'||$template=='house_sell'){
+
+			 $sql="SELECT nid FROM node WHERE vid=".$node;		 
+		     $result = db_query($sql)->fetchAll();	
+		     $node = $result[0]->nid;
+		 }*/
+		 //--end
+         return services_resource_extension_content_get_page_layout($node, $template);
+      }
+      break;
+    case 'block':
+      return services_resource_extension_content_get_block($element, $node);
+      break;
+    default:
+      return array(
+        'content' => '',
+        'cache_lifetime' => 0,
+      );
+      break;
+  }
+}
+
+/**
+ * Get blank page layout template.
+ *
+ * @param $template_override string
+ *   Optional template override.
+ *
+ * @return array
+ *   Response content.
+ */
+function services_resource_extension_content_get_blank_layout($template_override) {
+  global $theme_key;
+  // Get available blocks for theme regions.
+  $_GET['q'] = variable_get('site_frontpage', '');
+  $placements = services_resource_extension_content_get_block_placements();
+  // Get template content.
+  $HTML = '';
+  $template_path = drupal_get_path('theme', $theme_key);
+  $template = $template_path . '/services/blank_layout.tpl.php';
+  // Apply template override.
+  if (!empty($template_override)) {
+    $template = $template_path . '/services/' . $template_override . '.tpl.php';
+  }
+  // Load content template.
+  if (file_exists($template)) {
+    ob_start();
+    include_once($template);
+    $HTML = ob_get_contents();
+    ob_end_clean();
+  }
+  // Return template content.
+  return array(
+    'content' => theme('services_content_html', array('html' => $HTML)),
+    'cache_lifetime' => variable_get('srec_blank_request', 3600),
+  );
+}
+
+/**
+ * Get the page layout template.
+ *
+ * @param $node int
+ *   Node id for content.
+ * @param $template_override string
+ *   Optional template override.
+ *
+ * @return array
+ *   Response content.
+ */
+function services_resource_extension_content_get_page_layout($nid, $template_override){
+  global $theme_key;
+  $node = node_load($nid);
+  // Get available blocks for theme regions.
+  $_GET['q'] = 'node/' . $node->nid;
+  $placements = services_resource_extension_content_get_block_placements();
+  // Get template content.
+  $HTML = '';
+  $template_path = drupal_get_path('theme', $theme_key);
+  $template = $template_path . '/services/layout.tpl.php';
+  // Apply template override.
+  if (!empty($template_override)) {
+    $template = $template_path . '/services/' . $template_override . '.tpl.php';
+  }
+  // Load content template.
+  if (file_exists($template)) {
+    ob_start();
+    include_once($template);
+    $HTML = ob_get_contents();
+    ob_end_clean();
+  }
+  // Return template content.
+  return array(
+    'content' => theme('services_content_html', array('html' => $HTML)),
+    'cache_lifetime' => variable_get('srec_page_request', 3600),
+  );
+}
+
+/**
+ * Get block content.
+ *
+ * @param $element mixed
+ *   Block identifier.
+ * @param $node int
+ *   Node id to get content for.
+ *
+ * @return array
+ *   Response content.
+ */
+function services_resource_extension_content_get_block($block, $nid){
+  global $user, $theme_key;
+  $content = '';
+  $cache = 3600;
+  // Set up theme.
+  services_resource_extension_content_set_theme();
+  // Set up request for node.
+  $_GET['q'] = 'node/' . $nid;
+  // Get content for block request.
+  $block_record = db_query('SELECT * FROM {block} WHERE bid = :bid', array(':bid' => $block))->fetchObject();
+  if (!empty($block_record)) {
+    // Get block content.
+    $block = block_load($block_record->module, $block_record->delta);
+    $block_content = _block_render_blocks(array($block));
+    $build = _block_get_renderable_array($block_content);
+    $content = drupal_render($build);
+    // Remove cache for blocks that do not need it.
+    if ($block_record->cache == DRUPAL_NO_CACHE) {
+      $cache = 0;
+    }
+    // Check for cache overwrite settings.
+    $cache = services_resource_extension_content_block_cache_overwrite($block_record->module . '-' . $block_record->delta, $cache);
+  }
+  else {
+    // Not block record, check for custom block function.
+    if (function_exists($theme_key . '_services_block_' . $block)) {
+      $content = call_user_func($theme_key . '_services_block_' . $block, $nid);
+      // Check for cache overwrite settings.
+      $cache = services_resource_extension_content_block_cache_overwrite($theme_key . '_services_block_' . $block, $cache);
+    }
+  }
+  // Return response content.
+  return array(
+    'content' => $content,
+    'cache_lifetime' => $cache,
+  );
+}
+
+/**
+ * Check settings for block cache time overwrite.
+ *
+ * @param $block string
+ *   The name of the block to check.
+ * @param $cache int
+ *   The current cache settings.
+ *
+ * @return int
+ *   The block cache setting.
+ */
+function services_resource_extension_content_block_cache_overwrite($block, $cache) {
+  $settings = variable_get('srec_custom_blocks', array());
+  foreach ($settings as $record) {
+    if ($record['block_name'] == $block) {
+      $cache = (int) $record['cache_time'];
+    }
+  }
+  return $cache;
+}
+
+/**
+ * Implement theme function to format html.
+ *
+ * @param $variables array
+ *   Arguments passed into the template.
+ *
+ * @return string
+ *   Formatted HTML string.
+ */
+function theme_services_content_html($variables) {
+  return $variables['html'];
+}

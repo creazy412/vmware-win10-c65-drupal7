@@ -1,0 +1,119 @@
+<?php
+
+/**
+ * @file
+ * Allows the user to clone product variations in commerce.
+ */
+
+/**
+ * Function commerce_clone_product_variation_menu().
+ *
+ * Implements the hook_menu to create the url that will trigger the clone form.
+ */
+function commerce_clone_product_variation_menu() {
+  $items['admin/commerce/config/product-variation-types/clone'] = array(
+    'title' => 'Clone product variation type',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('commerce_clone_product_variation_clone_form'),
+    'access arguments' => array('administer product types'),
+    'type' => MENU_LOCAL_ACTION,
+  );
+  return $items;
+}
+
+/**
+ * Function commerce_clone_product_variation_clone_form_submit().
+ *
+ * Takes the form details and makes the clone of the product variation.
+ */
+function commerce_clone_product_variation_clone_form_submit($form, &$form_state) {
+  module_load_include('inc', 'commerce_backoffice_product', 'includes/commerce_backoffice_product.product_variation_types');
+  module_load_include('inc', 'commerce_product_ui', 'includes/commerce_product_ui.forms');
+  $vtype = commerce_product_type_load($form_state['values']['vtype']);
+  commerce_backoffice_product_variation_type_form_submit($form, $form_state);
+  $type_name = trim($form_state['values']['product_type']['type']);
+
+  $instances = field_info_instances('commerce_product', $vtype['type']);
+  $existing_instances = field_info_instances('commerce_product', $type_name);
+
+  foreach ($instances as &$instance) {
+    $instance['bundle'] = $type_name;
+    if (array_key_exists($instance['field_name'], $existing_instances)) {
+      // Update the field if it is already existing otherwise create.
+      field_update_instance($instance);
+    }
+    else {
+      field_create_instance($instance);
+    }
+  }
+}
+
+/**
+ * Function commerce_clone_product_variation_clone_form_validate().
+ *
+ * Validates the form clone variation including using the product ui validation.
+ */
+function commerce_clone_product_variation_clone_form_validate($form, &$form_state) {
+  module_load_include('inc', 'commerce_product_ui', 'includes/commerce_product_ui.forms');
+  return commerce_product_ui_product_type_form_validate($form, $form_state);
+}
+
+
+/**
+ * Function commerce_clone_product_variation_clone_form().
+ *
+ * Creates the form that allows you to clone a product variation.
+ */
+function commerce_clone_product_variation_clone_form($form, &$form_state) {
+  $form_state['product_type'] = commerce_product_ui_product_type_new();
+  $form['title'] = array('#markup' => '<h1>' . t('Clone product variation type') . '</h1>');
+  $form['create_product_display'] = array('#type' => 'hidden', '#value' => 1);
+  $form['product_type'] = array('#tree' => TRUE);
+  $form['product_type']['revision'] = array('#type' => 'hidden', '#value' => 1);
+  $form['product_type']['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('New name'),
+    '#size' => 60,
+    '#maxlength' => 128,
+    '#required' => TRUE,
+  );
+  $form['product_type']['type'] = array(
+    '#type' => 'machine_name',
+    '#title' => t('Machine name'),
+    '#default_value' => $form_state['product_type']['type'],
+    '#maxlength' => 32,
+    '#required' => TRUE,
+    '#machine_name' => array(
+      'exists' => 'commerce_product_type_load',
+      'source' => array('product_type', 'name'),
+    ),
+    '#description' => t('The machine-readable name of this product type. This name must contain only lowercase letters, numbers, and underscores, it must be unique.'),
+  );
+  $form['vtype'] = array(
+    '#type' => 'radios',
+    '#title' => t('Variation type'),
+    '#options' => array(),
+    '#required' => TRUE,
+  );
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Clone'));
+
+  foreach (commerce_product_types() as $product_type) {
+    if ($product_type['module'] === 'commerce_product_ui') {
+      $form['vtype']['#options'][$product_type['type']] = $product_type['name'];
+    }
+  }
+  return $form;
+}
+
+
+/**
+ * Function commerce_clone_product_variation_help().
+ *
+ * Implements hook_help to create the help for the clone page.
+ */
+function commerce_clone_product_variation_help($path, $arg) {
+  switch ($path) {
+    case 'admin/commerce/config/product-variation-types/clone':
+      return '<p>' . t('To clone a product variation you need to give it a name and select the variation you want to clone. Then it will create a product variation with the given name and all the fields and display settings of the selected variation.') . '</p>';
+  }
+}

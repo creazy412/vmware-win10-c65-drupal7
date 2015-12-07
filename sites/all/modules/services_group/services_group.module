@@ -1,0 +1,144 @@
+<?php
+/**
+ * @file
+ * group resource for services.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function services_group_permission() {
+  return array(
+    'join' => array(
+      'title' => t('subscribe to a group'),
+      'description' => t('subscribe to a group'),
+    ),
+    'leave' => array(
+      'title' => t('unsubscribe to a group'),
+      'description' => t('unsubscribe to a group'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_services_resources().
+ */
+function services_group_services_resources() {
+  return array(
+    'community' => array(
+      'actions' => array(
+        'leave' => array(
+          'help' => t('unsubscribe group for a user.'),
+          'callback' => 'services_group_leave',
+          'args' => array(        
+            array(
+              'name' => 'entity_id',
+              'type' => 'int',
+              'optional' => FALSE,
+              'source' => array('data' => 'entity_id'),
+              'description' => 'The entity id of the group',
+            ),
+					),
+          'access callback' => 'services_group_services_access',
+          'access arguments' => array('leave'),
+          'access arguments append' => TRUE,
+        ),
+        'join' => array(
+          'help' => t('subscribe group for a user.'),
+          'callback' => 'services_group_join',
+          'args' => array(       
+            array(
+              'name' => 'entity_id',
+              'type' => 'int',
+              'optional' => FALSE,
+              'source' => array('data' => 'entity_id'),
+              'description' => 'The entity id of the group',
+            ),
+          ),
+          'access callback' => 'services_group_services_access',
+          'access arguments' => array('join'),
+          'access arguments append' => TRUE,
+        ),       
+      ),
+    ),
+  );
+}
+
+/**
+ * Access callback for extension resources.
+ */
+function services_group_services_access() {
+    return TRUE;
+}
+
+/**
+ * subscription Group for a user.
+ *
+ * @param $vocab string
+ *   Optional, vocabulary name to get id for.
+ *
+ * @return array
+ *   Response content.
+ */
+function services_group_join($entity_id) {
+  global $user;
+
+  if (!$user->uid) {
+    // User is not logged in
+    return services_error(t('用户未登录.'), 406);
+  }
+  
+  $group = group_load($entity_id);
+
+  if (empty($group)) {
+  	//not a group of given id and type
+  	return services_error(t('错误参数,该社区不存在.'), 406);
+  }
+
+  $group_membership = group_membership_load($entity_id, $user->uid);
+  if ($group_membership) {
+    return array(True, '用户已经关注该社区');
+  }
+
+  $group->addMember($user->uid);
+
+	return array(True, '关注社区操作成功');
+}
+
+/**
+ * unsubscription Group for a user.
+ *
+ * @param $entity_id
+ *   the entity id of group entity.
+ *
+ * @param $entity_type
+ *   the entity type of group entity.
+ *
+ * @return true
+ *   true on success, messge on error.
+ */
+function services_group_leave($entity_id) {
+  global $user;
+
+  if (!$user->uid) {
+    // User is not logged in
+    return services_error(t('用户未登录.'), 406);
+  }
+  
+  $entity = entity_load_single('group', $entity_id);
+  
+  if (!isset($entity)) {
+  	//not a group of given id and type
+  	return services_error(t('错误参数,该社区不存在.'), 406);
+  }
+ 
+  $group_membership = group_membership_load($entity_id, $user->uid);
+  if (!$group_membership) {
+    return array(True, '用户没有关注该社区');
+  }
+  
+  $group_membership->delete();
+  drupal_set_message(t('You have left the group.'));
+  
+  return array(True, '操作成功');
+}

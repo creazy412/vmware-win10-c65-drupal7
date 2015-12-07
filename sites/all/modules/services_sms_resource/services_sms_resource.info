@@ -1,0 +1,14 @@
+name = Services sms resource
+description = Build service resourses for Sending sms.
+package = Services
+core = 7.x
+
+dependencies[] = services
+dependencies[] = sms
+
+; Information added by Drupal.org packaging script on 2014-07-15
+version = "7.x-1.0-dev"
+core = "7.x"
+project = "services_sms_resource"
+datestamp = "1398648228"
+

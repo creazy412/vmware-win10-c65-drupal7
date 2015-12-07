@@ -1,0 +1,20 @@
+<?php
+/**
+ * @file
+ *  Provides extention for the Services Entity API.
+ */
+
+/**
+ * Implements hook_services_entity_resource_info().
+ */
+function services_entity_ext_services_entity_resource_info() {
+  $result = array();
+
+  $result['extend'] = array(
+    'title' => 'Generic Entity extend Processor ',
+    'description' => 'Acts as a generic wrapper for entities. Data structures are exactly what they are in Drupal. extend for Flattens field value arrays on the given entity and  Expands entity reference field values',
+    'class' => 'ServicesEntityResourceControllerExtend',
+  );
+  return $result;
+}
+

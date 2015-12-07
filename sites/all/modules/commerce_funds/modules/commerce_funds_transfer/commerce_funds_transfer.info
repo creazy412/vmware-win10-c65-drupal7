@@ -1,0 +1,7 @@
+name =  Commerce Funds Transfer
+description = Allow users to transfer funds between thier accounts
+core = 7.x
+dependencies[] = commerce_funds
+dependencies[] = rules
+
+package = "Commerce Funds"

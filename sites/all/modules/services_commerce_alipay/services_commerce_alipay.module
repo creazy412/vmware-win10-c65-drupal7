@@ -1,0 +1,40 @@
+<?php
+
+/**
+ * @file
+ * Provide mobile verified sms integration with Services.
+ */
+
+
+/**
+ * Implements hook_services_resources().
+ */
+function services_commerce_alipay_services_resources() {
+  // File where resources stored.
+  $file = array(
+    'type' => 'inc',
+    'module' => 'services_commerce_alipay',
+    'name' => 'services_commerce_alipay.resource'
+  );
+  $definition = array(
+    'commerce_alipay' => array(
+      'actions' => array(
+        'notify' => array(
+          'help' => t('alipay post notify to here.'),
+          'file' => $file,
+          'callback' => 'services_commerce_alipay_notify',
+					'access callback' => 'services_commerce_alipay_permission',
+					'access arguments' => array('view'),
+					'access arguments append' => TRUE,
+        ),
+      ),
+    ),
+  );
+
+  return $definition;
+}
+
+
+
+
+

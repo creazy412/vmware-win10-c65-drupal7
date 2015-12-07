@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file
+ * Module code.
+ */
+
+/**
+ * iTunes Link Maker URL
+ */
+define('ITUNES_LINKMAKER_URL', 'http://itunes.apple.com/linkmaker/');
+
+/**
+ * Implements hook_help().
+ */
+function smart_app_banners_help($path, $arg) {
+  switch ($path) {
+    // Main module help for the block module
+    case 'admin/help#smart_app_banners':
+      return '<p>' . t('Provides support for Smart App Banners. An <em>app-id</em> number is required; visit !itunes_linkmaker_url to look up any app-id.', array('!itunes_linkmaker_url' => l(ITUNES_LINKMAKER_URL, ITUNES_LINKMAKER_URL))) . '</p>';
+    }
+}
+
+/**
+ * Implements hook_ctools_plugin_api().
+ */
+function smart_app_banners_ctools_plugin_api($owner, $api) {
+  if ($owner == 'metatag' && $api == 'metatag') {
+    return array('version' => 1);
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function smart_app_banners_theme() {
+  $info['metatag_smart_app_banner'] = array(
+    'render element' => 'element',
+  );
+
+  return $info;
+}
+
+/**
+ * Theme callback for a Smart App Banner meta tag.
+ */
+function theme_metatag_smart_app_banner($variables) {
+  $element = &$variables['element'];
+  element_set_attributes($element, array('name', '#value' => 'content'));
+  unset($element['#value']); // Prevent content in the tag.
+  $element['#attributes']['content'] = 'app-id=' . $element['#attributes']['content'];
+  return theme('html_tag', $variables);
+}

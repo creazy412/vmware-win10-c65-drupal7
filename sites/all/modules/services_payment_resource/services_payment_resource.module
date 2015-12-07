@@ -1,0 +1,25 @@
+<?php
+
+/**
+ * @file
+ * Provide integration with Services.
+ */
+
+
+
+function services_payment_resource_services_resources() {
+
+	$pay_resource = array(
+		'payment' => array(
+			'index' => array(
+				'file' => array(
+					'type' => 'inc',
+					 'module' => 'services_payment_resource',
+                      'name' => 'services_payment_resource.resource'
+				),
+				'callback' => '_pay_resource_retrieve',
+			),
+		),		
+	);
+	return $pay_resource;
+}

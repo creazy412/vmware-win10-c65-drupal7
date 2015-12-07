@@ -1,0 +1,7 @@
+name = Commerce unionpay
+description = Implements Unionpay payment services for use with Drupal Commerce.
+package = Commerce (Unionpay)
+core = 7.x
+dependencies[] = commerce
+dependencies[] = commerce_payment
+dependencies[] = entity

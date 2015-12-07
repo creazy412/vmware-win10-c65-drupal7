@@ -1,0 +1,28 @@
+# Chinese, Traditional translation of EVA: Entity Views Attachment (7.x-1.2)
+# Copyright (c) 2013 by the Chinese, Traditional translation team
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: EVA: Entity Views Attachment (7.x-1.2)\n"
+"POT-Creation-Date: 2013-07-13 13:20+0000\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Language-Team: Chinese, Traditional\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+msgid "Yes"
+msgstr "是"
+msgid "No"
+msgstr "否"
+msgid "None"
+msgstr "無"
+msgid "Views"
+msgstr "Views"
+msgid "Arguments"
+msgstr "參數"
+msgid "Entity type"
+msgstr "實體類別"
+msgid "Exposed form"
+msgstr "篩選表單"

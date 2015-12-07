@@ -1,0 +1,8 @@
+/* Display image bellow Drupal overlay.*/
+.cloud-zoom-container #wrap {
+  z-index: 499 !important;
+}
+.cloud-zoom-gallery-thumbs {
+  clear:left; 
+}
+.cloud-zoom-gallery{padding-right:6 px;}

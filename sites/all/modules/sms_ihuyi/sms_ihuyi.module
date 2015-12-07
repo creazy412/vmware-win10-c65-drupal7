@@ -1,0 +1,156 @@
+<?php
+
+/**
+ * @file
+ * Provide HUYI(www.ihuyi.com) integration for SMS framework.
+ */
+
+/**
+ * Implements hook_gateway_info().
+ */
+function sms_ihuyi_gateway_info() {
+  return array(
+    'sms_ihuyi' => array(
+      'name' => 'SMS HUIYI',
+      'send' => 'sms_ihuyi_send',
+      'configure form' => 'sms_ihuyi_admin_form',
+    ),
+  );
+}
+
+/**
+ * Implements hook_send().
+ */
+function sms_ihuyi_send($number, $message, $options = array()) {
+  $status = FALSE;
+  $return_message = t("No message sent");
+  $validation_message = t("No validation attempted");
+
+  // Validate the message length
+  if (strlen($message) > 160) {
+    $return_message = t('The message you wanted to send is too long and cannot be sent.');
+    return array(
+      'status' => $status,
+      'message' => $return_message,
+      'variables' => NULL,
+      'validation' => $validation_message,
+    );
+  }
+
+  $data = array(
+    'mobile' => trim($number),
+    'content' => trim($message),
+  );
+
+  $command = '/webservice/sms.php?method=Submit';
+  $result = _sms_ihuyi_gateway_request($command, $data);
+
+  if(!isset($result->error)) {
+    $xml = simplexml_load_string(trim($result->data));
+
+    watchdog('sms_ihuyi', '<pre >Log sended sms: <br />'. print_r($result->request, TRUE) . ' <br /> '. print_r($xml, TRUE)) . '</pre>';
+
+    $status = TRUE;
+    $return_message = t('Send success');
+  }
+
+  $result = array(
+    'status' => $status,
+    'message' => $return_message,
+    'variables' => NULL,
+  );
+
+  return $result;
+}
+
+/**
+ * Callback: sms_ihuyi_admin_form.
+ */
+function sms_ihuyi_admin_form($configuration) {
+  $form = array();
+
+  $form['sms_ihuyi_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('HUIYI GATEWAY URL'),
+    '#default_value' => isset($configuration['sms_ihuyi_url']) ? $configuration['sms_ihuyi_url'] : '',
+    '#description' => t('The custom URL used to access your HUIYI GATEWAY API. It often looks like "http://www.ihuyi.cn".'),
+    '#required' => TRUE,
+  );
+
+  $form['sms_ihuyi_account'] = array(
+    '#type' => 'textfield',
+    '#title' => t('HUIYI Account'),
+    '#default_value' => isset($configuration['sms_ihuyi_account']) ? $configuration['sms_ihuyi_account'] : '',
+    '#description' => t('The HUIYI Account.'),
+    '#required' => TRUE,
+  );
+
+  $form['sms_ihuyi_password'] = array(
+    '#type' => 'password',
+    '#title' => t('HUIYI Password'),
+    '#description' => t('The password to access HUIYI'),
+    '#required' => TRUE,
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function sms_ihuyi_form_sms_admin_gateway_form_alter(&$form, &$form_state) {
+  $form['#validate'][] = 'sms_ihuyi_admin_form_validate';
+}
+
+/**
+ * Validate the admin form.
+ */
+function sms_ihuyi_admin_form_validate($form, &$form_state) {
+  // Register the account.
+  $command = '/webservice/sms.php?method=Submit';
+
+  $url = $form_state['values']['sms_ihuyi_url'];
+  $data = array(
+    'account' => $form_state['values']['sms_ihuyi_account'],
+    'password' => $form_state['values']['sms_ihuyi_password'],
+  );
+
+  $params = drupal_http_build_query($data);
+  $url = $url. $command . '&' . $params;
+  $result = drupal_http_request($url, array('method'=>'GET', 'timeout'=>10));
+
+  if(isset($result->error)) {
+    form_set_error('', t('Register failure.'));
+  } else {
+    $xml = simplexml_load_string(trim($result->data));
+    if ($xml->error < 0 && $xml->error != -104) {
+      form_set_error('', t('Register failure, ERROR: ') . $xml->error);
+    }
+  }
+}
+
+/**
+ * Request gateway.
+ * 
+ * @param string $command
+ * @param array $data
+ * 
+ * @return object
+ */
+function _sms_ihuyi_gateway_request($command, $data = array()) {
+  $gateway = sms_gateways('gateways');
+  $config = $gateway['sms_ihuyi']['configuration'];
+
+  $data += array(
+    'account' => $config['sms_ihuyi_account'],
+    'password' => $config['sms_ihuyi_password'],
+  );
+
+  $params = drupal_http_build_query($data);
+  $url = $config['sms_ihuyi_url'] . $command . '&' . $params;
+  $result = drupal_http_request($url, array('method'=>'GET', 'timeout'=>10));
+  
+  watchdog('sms_ihuyi', $url . '<br /><pre>' . print_r($result, TRUE) . '</pre>');
+
+  return $result;
+}

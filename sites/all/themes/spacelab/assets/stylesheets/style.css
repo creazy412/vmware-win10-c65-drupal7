@@ -1,0 +1,77 @@
+
+body { font-family: "Lucida Grande","Hiragino Sans GB",'Open Sans', 'Microsoft YaHei', sans-serif; font-size: 14px; line-height: 160%; }
+
+h1 { font-size: 26px }
+h2 { font-size: 22px }
+h3 { font-size: 18px }
+h4 { font-size: 16px }
+h5 { font-size: 14px }
+h6 { font-size: 12px }
+
+#header-top ul.menu.nav li {display: inline-block;}
+#main-wrapper {
+  margin-bottom: 50px;
+  min-height: 600px;
+}
+footer#subfooter {
+background-color: whitesmoke;
+padding: 54px 0;
+}
+
+#user-login-page .jumbotron {margin: 55px 0;}
+#user-login-page .pane-title {font-size: xx-large;padding-bottom: 30px;}
+
+.panels-bootstrap-tabs .tab-pane .panel-pane .pane-title {
+    display: none;
+}
+
+#action-links li {list-style-type: none; padding: 10px;}
+
+.form-control {width: auto;}
+/*product-search-page*/
+#product-search-page .pane-title, #product-search-page .pane-content,
+#product-search-page .item-list ul li,
+#product-search-page .search-api-ranges-widget .text-range,
+#product-search-page .search-api-ranges-widget .yui3-g,
+#product-search-page .search-api-ranges-widget .range-box,
+#product-search-page .search-api-ranges-widget .range-slider-box,
+#product-search-page .search-api-ranges-widget .form-control
+{display:inline-block;}
+#product-search-page .pane-title{width:80px;} 
+#product-search-page .search-api-ranges-widget .range-slider-box{width: 200px; padding:0 10px;}
+#product-search-page .search-api-ranges-widget .text-range{padding:0 20px;}
+
+/*mmenu*/
+#mmenu_left {width: 300px;}
+.navbar-header .admin-menu {float:left; font-size: large; display: initial; margin-left: 10px; margin-right: 0;}
+.navbar-default .navbar-toggle .icon-bar {background-color: #808080;}
+.commerce-backoffice-view .vbo-views-form #edit-select select {height:38px;}
+.commerce-backoffice-view .views-exposed-form .views-widget-filter-combine {padding: 1em 0;position: absolute;right: 0;top: 90%;z-index: 1;}
+/*admin*/
+.commerce-backoffice-view .vbo-views-form select {height: 38px;margin: 1px 10px 2px 0;}
+
+.radio input[type="radio"], .radio-inline input[type="radio"], .checkbox input[type="checkbox"], .checkbox-inline input[type="checkbox"] {margin: -2px 4px 0 -17px; position: unset;}
+
+#form-builder-field-palette ul li {width: 118px;}   
+
+/*
+input[type="radio"], .radio-inline input[type="radio"], .checkbox input[type="checkbox"], .checkbox-inline input[type="checkbox"] {margin:5px  -20px;position: absolute;}
+
+.china-address .form-item {margin:0 0 8px;float:unset;}
+
+label {display: inline-block;float: left; font-weight: bold;margin: 5px 10px 10px 5px;max-width: 100%;}
+
+label {display: inline-block;float: unset;font-weight: bold; margin: 0.2px 10px 10px 2px;max-width: 100%;}
+
+label {clear: both;padding-left: 0px;margin-bottom: 0;font-weight: normal;}
+
+.radio label, .checkbox label {font-weight: normal;margin-bottom: 0;padding-left: 90px;}
+
+body {line-height: 138%;}
+
+#form-builder-field-palette ul li a {padding: 6px 4px 4px 28px;margin: -4px -4px -1px -28px;width: 180%;display: inline-block;}
+
+#ctools-export-ui-list-form .form-submit {margin-right: 13px; margin-top: 20px !important;}
+
+.form-control {margin-top: 20px;width: 100%;}
+*/

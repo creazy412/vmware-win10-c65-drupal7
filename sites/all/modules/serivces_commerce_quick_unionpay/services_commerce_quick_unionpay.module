@@ -1,0 +1,62 @@
+<?php
+/**
+ * @file
+ * Provide mobile verified sms integration with Services.
+ */
+
+/**
+ * Implements hook_services_resources().
+ */
+function services_commerce_quick_unionpay_services_resources() {
+  // File where resources stored.
+  $file = array(
+    'type' => 'inc',
+    'module' => 'services_commerce_quick_unionpay',
+    'name' => 'services_commerce_quick_unionpay.resource'
+  );
+  $definition = array(
+    'commerce_quick_unionpay' => array(
+      'actions' => array(
+        'notify' => array(
+          'help' => t('unionpay post notify to here.'),
+          'file' => $file,
+          'callback' => 'services_commerce_quick_unionpay_notify',
+          'access callback' => 'services_commerce_quick_unionpay_permission',
+					'access arguments' => array('view'),
+					'access arguments append' => TRUE,
+        ),
+		'backendurl' => array(
+          'help' => t('unionpay post notify to here.'),
+          'file' => $file,
+          'callback' => 'services_commerce_quick_unionpay_backendurl',
+          'access callback' => 'services_commerce_quick_unionpay_permission',
+					'access arguments' => array('view'),
+					'access arguments append' => TRUE,
+        ),
+		'frontendurl' => array(
+          'help' => t('unionpay post notify to here.'),
+          'file' => $file,
+          'callback' => 'services_commerce_quick_unionpay_frontendurl',
+          'access callback' => 'services_commerce_quick_unionpay_permission',
+					'access arguments' => array('view'),
+					'access arguments append' => TRUE,
+        ),
+		'appbackendurl' => array(
+          'help' => t('unionpay post notify to here.'),
+          'file' => $file,
+          'callback' => 'services_commerce_quick_unionpay_appbackendurl',
+          'access callback' => 'services_commerce_quick_unionpay_permission',
+					'access arguments' => array('view'),
+					'access arguments append' => TRUE,
+        ),
+      ),
+    ),
+  );
+
+  return $definition;
+}
+
+
+
+
+

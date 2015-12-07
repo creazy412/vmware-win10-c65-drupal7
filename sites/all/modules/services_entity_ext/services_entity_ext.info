@@ -1,0 +1,15 @@
+name = Services Entity Extention
+description = Expand entities to the Service API.
+package = Services
+core = 7.x
+dependencies[] = services
+dependencies[] = services_entity
+dependencies[] = entity
+
+files[] = plugins/services_entity_resource_extend.inc
+
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "services_entity_ext"
+
+

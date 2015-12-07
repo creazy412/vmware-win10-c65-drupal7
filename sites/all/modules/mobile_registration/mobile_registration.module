@@ -1,0 +1,369 @@
+<?php
+
+/*This module modifies the user login process so that
+ * the login name expects and validates the mobile phone number of each user, not the name
+ * The username validation doesn't check for uniqueness
+ * use the field_nickname instead of username
+ * The database username field store the mobile number
+*/
+
+/**
+ * Implements hook_menu().
+ */
+function mobile_registration_menu() { 
+  $items['admin/config/people/mobile_registration'] = array(
+    'title' => 'Mobile Registration Setting',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mobile_registration_config_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'mobile_registration.admin.inc',
+  );
+  return $items;
+}
+
+/**
+* Implementation of hook_permission().
+*/
+function mobile_registration_permission() {
+  return array(
+    'administer mobile registration' => array(
+      'title' => t('Administer mobile registration'), 
+      'description' => t('Perform administration tasks for mobile registration.'),
+    ),
+  );
+}
+/*
+ * implements hook_form_user_login_alter
+ */
+function mobile_registration_form_user_login_alter(&$form) {
+  _mobile_registration_alter_login_form($form);
+}
+/*
+ * implements hook_form_user_login_block_alter
+ */
+function mobile_registration_form_user_login_block_alter(&$form) {
+  _mobile_registration_alter_login_form($form);
+}
+
+function _mobile_registration_alter_login_form(&$form) {
+  $form['name']['#title'] = t('Mobile No');
+  $form['name']['#description'] = t('Enter your mobile number');
+}
+
+/**
+ * Implements hook_login_name_validate.
+ */
+
+function mobile_registration_login_validate($form, &$form_state) {
+  if (!empty($form_state['values']['name']) && user_is_blocked($form_state['values']['name'])) {
+    // Blocked in user administration.
+    form_set_error('name', t('The mobile no: %name has not been activated or is blocked.', array('%name' => $form_state['values']['name'])));
+  }
+}
+
+function mobile_registration_form_user_profile_form_alter(&$form, &$form_state) {
+  $form['account']['name']['#title'] = t('Mobile No');
+  $form['account']['name']['#maxlength'] = 11;
+  $form['account']['name']['#size'] = 20;  
+  $form['account']['name']['#description'] = t('Enter your mobile number');
+  $form['account']['mail']['#required'] = FALSE;
+	$form['account']['mail']['#element_validate']=array();
+
+	$form['#validate'][] = 'mobile_registration_validate';
+}
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function mobile_registration_form_user_register_form_alter(&$form, &$form_state) {
+  $form['account']['name']['#title'] = t('Mobile No');
+  $form['account']['name']['#maxlength'] = 11;
+  $form['account']['name']['#size'] = 20;  
+  $form['account']['name']['#description'] = t('Enter your mobile number');
+  $form['account']['mail']['#required'] = FALSE;
+	$form['account']['mail']['#element_validate']=array();
+
+	//defining button which will call ajax callback when it is clicked
+ 	$form['account']['send_sms_button']=array(
+    '#type'=>'button',
+    '#prefix' => '<div id="send_sms_id">',
+    '#suffix' => '</div>',
+		'#default_value' => t('sendsms'),
+		'#limit_validation_errors' => array('account'=>array('name')),
+		'#validate'=>array('mobile_registration_registration_name_validate'),
+		'#weight' => $form['account']['name']['#weight']+2, 
+		'#ajax'=>array(
+	  		'callback'=>'mobile_registration_registration_callback',
+	      'wrapper'=>'send_sms_id',
+	      'method'=>'replace',
+	      'effect' => 'fade',
+		),
+	);	  
+
+  if (!empty($form_state['values']['send_sms_button'])) {
+	  $error = form_get_errors();
+		if (!$error){
+	  	$mobile =  trim($form_state['values']['name']);
+	  	$code = mobile_registration_send_confirmation($mobile);
+ 		  $error = form_get_errors();
+      if (!$error) {
+			  drupal_set_message(t('Send the code successful, Please be patient to wait or request to send again after 90 seconds.'));
+			}
+		}
+  }
+
+  //defining textfield
+  $form['account']['code']=array(
+    '#type'=>'textfield',
+	  '#size'=>'10',
+	  '#maxlength'=>'6',
+    '#required' => TRUE,
+    '#title'=>t('Confirm Code'),  
+	  '#description'=>t('Enter Your Confirm Code'),      
+		'#weight' =>   $form['account']['send_sms_button']['#weight']+2,   
+  );
+  $form['account']['pass']['#weight'] = $form['account']['code']['#weight']+2;
+   
+  $form['#validate'][] = 'mobile_registration_code_validate';
+	$form['#validate'][] = 'mobile_registration_validate';
+	
+}
+
+function mobile_registration_registration_callback($form, &$form_state) {
+	return $form['account']['send_sms_button'];
+}
+
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function mobile_registration_registration_name_validate($form, &$form_state) {
+  $mobile = trim($form_state['values']['name']);
+  if (empty($mobile) || strlen($mobile)!=11 || !preg_match("/^\d*$/",$mobile)) {
+		form_set_error('name',t('The phone number is invalid.'));
+	}
+  elseif (user_load_by_name($mobile)) {
+    form_set_error('name', t('Sorry, %name is already registered as a user account.', array('%name' => $mobile)));
+  }
+}
+ 
+
+function mobile_registration_validate($form, &$form_state) {
+ 	mobile_registration_unset_error('mail');
+}
+ 
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function mobile_registration_form_user_pass_alter(&$form, &$form_state) {
+  $form['name']['#title'] = t('Mobile No');
+  $form['name']['#maxlength'] = 11;
+  $form['name']['#size'] = 20;  
+  $form['name']['#description'] = t('Enter your mobile number');
+	
+// Allow logged in users to request this also.
+	global $user;
+  if ($user->uid > 0) {
+    $form['name']['#type'] = 'textfield';
+		$form['name']['#description']='';
+    $form['name']['#disable'] = TRUE;
+    $form['name']['#value'] = $user->name;
+		$form['mail'] = array();
+  }	
+  
+	//defining button which will call ajax callback when it is clicked
+ 	$form['send_sms_button']=array(
+    '#type'=>'button',
+    '#prefix' => '<div id="send_sms_id">',
+    '#suffix' => '</div>',
+		'#default_value' => t('sendsms'),
+		'#limit_validation_errors' => array('account'=>array('name')),
+		'#validate'=>array('mobile_registration_user_pass_validate'),
+		'#ajax'=>array(
+	  		'callback'=>'mobile_registration_sendsms_callback',
+	      'wrapper'=>'send_sms_id',
+	      'method'=>'replace',
+	      'effect' => 'fade',
+		),
+	);	  
+
+  if (!empty($form_state['values']['send_sms_button'])) {
+		$error = form_get_errors();
+		if (!$error){
+	  	$mobile =  trim($form_state['values']['name']);
+	  	$code = mobile_registration_send_confirmation($mobile);
+ 		  $error = form_get_errors();
+      if (!$error) {
+			  drupal_set_message(t('Send the code successful, Please be patient to wait or request to send again after 90 seconds.'));
+			}
+		}
+  }
+  
+  //defining textfield
+  $form['code']=array(
+    '#type'=>'textfield',
+	  '#size'=>'10',
+	  '#maxlength'=>'6',
+    '#required' => TRUE,
+    '#title'=>t('Confirm Code'),  
+	  '#description'=>t('Enter Your Confirm Code'),      
+      );
+
+
+	$form['pass'] = array(
+      '#type' => 'password_confirm',
+      '#size' => 25,
+      '#description' => t('Provide a password for the new account in both fields.'),
+      '#required' => TRUE,
+    );
+	
+	$form['actions']['submit']['#value']=t('Reset password');
+	$form['#validate'][] ='mobile_registration_code_validate';
+	$form['#submit']=array('mobile_registration_form_user_pass_submit');
+	return $form;
+}
+
+
+function mobile_registration_form_user_pass_submit($form, &$form_state) {
+  $newpass = trim($form_state['values']['pass']);
+	$mobile = trim($form_state['values']['name']);
+	$user = user_load_by_name($mobile);
+	user_save($user, array('pass' => $newpass));
+  drupal_set_message(t('Your Password have been reset. You can login now.'));
+	
+	watchdog('user', '%name Password have been reset.', array('%name' => $user->name));
+  $form_state['redirect'] = 'user';
+  return;
+}
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function mobile_registration_sendsms_callback($form, &$form_state) {
+	return $form['send_sms_button'];
+}
+
+//replacement of user_login_authenticate_validate()
+function mobile_registration_user_pass_validate($form, &$form_state) {
+  $mobile = trim($form_state['values']['name']);
+  if (empty($mobile) || strlen($mobile)!=11 || !preg_match("/^\d*$/",$mobile)) {
+		form_set_error('name',t('The phone number is invalid.'));
+	}
+  elseif (!user_load_by_name($mobile)) {
+    form_set_error('name', t('Sorry, %name is not recognized as a user account.', array('%name' => $mobile)));
+  }
+}
+
+
+/**
+ * Clears an error against one form element.
+ *
+ * @param $name
+ *   The name of the form element.
+ */
+function mobile_registration_unset_error($name) {
+  $errors = &drupal_static('form_set_error', array());
+  $removed_messages = array();
+  if (isset($errors[$name])) {
+    $removed_messages[] = $errors[$name];
+    unset($errors[$name]);
+  	$_SESSION['messages']['error'] = array_diff($_SESSION['messages']['error'], $removed_messages);
+		if (empty($_SESSION['messages']['error'])) {
+      unset ($_SESSION['messages']['error']);
+    }
+  }
+}
+
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function mobile_registration_code_validate($form, &$form_state) {
+  $code = trim($form_state['values']['code']);
+	$mobile = trim($form_state['values']['name']);
+  if (isset($_SESSION['mobile_verify_code'])) {
+		$verify_code = $_SESSION['mobile_verify_code']['code'];
+		$verify_mobile=$_SESSION['mobile_verify_code']['number'];
+    if ($verify_mobile==$mobile & $verify_code==$code){
+    	 unset($_SESSION['mobile_verify_code']);
+			 return;
+    }
+  }   
+	form_set_error('code', t('your confirm code is not right.'));
+}
+ 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function mobile_registration_send_confirmation($mobile) {
+  if (!isset($_SESSION['mobile_verify_code'])) {
+    $_SESSION['mobile_verify_code'] = array();
+    $_SESSION['mobile_verify_code']['timestamp'] = time();
+    $_SESSION['mobile_verify_code']['sendcount'] = 0;
+  }   
+  $age= time()-$_SESSION['mobile_verify_code']['timestamp'];
+  $count = $_SESSION['mobile_verify_code']['sendcount'];
+  
+  if ($count>0 && $age<90) {	
+  	form_set_error('name', t('Sorry, Please wait for about %duration seconds, then send again.', array('%duration' => 90-$age)));
+  }
+  elseif ($count>5) { 
+  	if ($age>3600) {
+  		//reset the count after one hour
+     	$_SESSION['mobile_verify_code']['sendcount'] = 0;
+    }
+  	form_set_error('name', t('Sorry, You press send too many times, please wait for a while, then send again.'));
+  }
+  else {	
+	  $code = rand(1000, 9999);
+	  $mobile = sms_formatter($mobile); 
+	  sms_send($mobile, mobile_registration_confirm_message($code), '');
+	
+	  $_SESSION['mobile_verify_code']['timestamp'] = time();
+	  $_SESSION['mobile_verify_code']['sendcount'] = $count+1;
+	  $_SESSION['mobile_verify_code']['code'] = $code;
+	  $_SESSION['mobile_verify_code']['number'] = $mobile;
+	
+	  return $code;
+	}
+}
+
+/**
+ * Create a confirmation message sent to a user, this contains a code which is
+ * used to confirm that the number is actually correct.
+ *
+ * @param $code
+ *   Random code to send to user.
+ *
+ * @return $text
+ *   Created message, ready to send to user.
+ */
+function mobile_registration_confirm_message($code) {
+  $text_format = variable_get('mobile_registration_confirm_message', '[site:name]confirmation code: @code') ;
+  $text = token_replace($text_format, array());
+  $text = t($text,  array('@code'=>$code));
+  return $text;
+}
+
+/**
+ * Implements hook_username_alter();
+ */
+ 
+function mobile_registration_username_alter(&$name, $account) {
+ 	if (empty($account->uid)) {
+    // Don't alter anonymous users or objects that do not have any user ID.
+    return;
+ 	}
+	
+	/*load the full user object, since $account not always provide all informations */
+	$auser = user_load($account->uid);
+	$username_field = variable_get('mobile_registration_nickname_field', 'field_nickname');
+	
+	$field_nickname = field_get_items('user', $auser, $username_field);
+	
+  if ($field_nickname) {
+		$first_item = reset($field_nickname);
+    $name = $first_item['value'];
+  }
+}

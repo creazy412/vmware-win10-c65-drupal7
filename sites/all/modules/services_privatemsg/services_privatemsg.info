@@ -1,0 +1,8 @@
+name = Services Private Messages
+description = Build service endpoints with Private Messages.
+package = Services
+core = 7.x
+dependencies[] = services
+dependencies[] = privatemsg
+
+files[] = services_privatemsg.module

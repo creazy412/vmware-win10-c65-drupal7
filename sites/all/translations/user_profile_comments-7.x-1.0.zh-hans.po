@@ -1,0 +1,22 @@
+# Chinese, Simplified translation of User profile comments (7.x-1.0)
+# Copyright (c) 2015 by the Chinese, Simplified translation team
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: User profile comments (7.x-1.0)\n"
+"POT-Creation-Date: 2015-01-19 12:21+0000\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Language-Team: Chinese, Simplified\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+msgid "Comments"
+msgstr "评论"
+msgid "Comment"
+msgstr "评论"
+msgid "Comment display"
+msgstr "评论显示"
+msgid "Comment fields"
+msgstr "评论的字段"

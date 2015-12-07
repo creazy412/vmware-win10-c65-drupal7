@@ -1,0 +1,222 @@
+<?php
+
+/**
+ * @file
+ * Build service endpoints with Private Messages.
+ */
+
+/**
+ * Implements hook_services_resources().
+ */
+function services_privatemsg_services_resources() {
+
+	$privatemsg_resource = array(
+		'thread' => array(
+			'retrieve' => array(
+				'file' => array(
+					'type' => 'inc',
+					'module' => 'services_privatemsg',
+					'name' => 'resources/privatemsg_resource',
+				),
+				'callback' => '_thread_resource_retrieve',
+				'args' => array(
+					array(
+						'name' => 'thread_id',
+						'optional' => FALSE,
+						'source' => array('path' => 0),
+						'type' => 'int',
+						'description' => 'The thread id of the message to get.',
+					),
+					/*array(
+						'name' => 'type',
+						'optional' => TRUE,
+						'source' => array('data' => 'type'),
+						'type' => 'string',
+						'description' => 'The type of message to get. Can be inbox or sent.',
+					),*/
+					/*array(
+						'name' => 'load_full',
+						'optional' => TRUE,
+						'source' => array('data' => 'load_full'),
+						'type' => 'int',
+						'description' => 'A boolean to indicate whether to load the full message or not.',
+					),*/
+				),
+				'access callback' => 'services_privatemsg_view_access',
+				'access arguments append' => TRUE,
+			),
+		),		
+		'usermsg' => array(
+			'retrieve' => array(
+				'file' => array(
+					'type' => 'inc',
+					'module' => 'services_privatemsg',
+					'name' => 'resources/privatemsg_resource',
+				),
+				'callback' => '_usermsg_resource_retrieve',
+				'args' => array(
+					array(
+						'name' => 'uid',
+						'optional' => FALSE,
+						'source' => array('path' => 0),
+						'type' => 'int',
+						'description' => 'Uid of the user for which to retrieve the messages.',
+					),
+					array(
+						'name' => 'type',
+						'optional' => TRUE,
+						'source' => array('param' => 'type'),
+						'type' => 'string',
+						'description' => 'Type of message. Can be inbox or sent.',
+					),
+				),
+				'access callback' => 'privatemsg_user_access',
+				'access arguments' => array('read privatemsg'),
+			),
+		),
+		'msg' => array(
+			'index' => array(
+				'file' => array(
+					'type' => 'inc',
+					'module' => 'services_privatemsg',
+					'name' => 'resources/privatemsg_resource',
+				),
+				'callback' => '_msg_resource_retrieve',
+				'args' => array(
+					array(
+						'name' => 'pmids',
+						'optional' => TRUE,
+						'source' => array('param' => 'pmids'),
+						'type' => 'array',
+						'description' => 'An array of mids of the messages to get.',
+					),
+				),
+				'access callback' => '_msg_resource_retrieve_access',
+			),
+			'create' => array(
+				'file' => array(
+					'type' => 'inc',
+					'module' => 'services_privatemsg',
+					'name' => 'resources/privatemsg_resource',
+				),
+				'callback' => '_msg_resource_create',
+				'args' => array(
+					array(
+						'name' => 'subject',
+						'optional' => FALSE,
+						'source' => array('data' => 'subject'),
+						'description' => 'Subject of the private message.',
+						'type' => 'string',
+					),
+					array(
+						'name' => 'body',
+						'optional' => TRUE,
+						'source' => array('data' => 'body'),
+						'description' => 'Body of the private message.',
+						'type' => 'string',
+					),
+					array(
+						'name' => 'body_format',
+						'optional' => TRUE,
+						'source' => array('data' => 'body_format'),
+						'description' => 'Body format of the private message.',
+						'type' => 'string',
+					),
+					array(
+						'name' => 'thread_id',
+						'optional' => TRUE,
+						'source' => array('data' => 'thread_id'),
+						'description' => 'A thread ID if this is a reply to an already existing message, otherwise leave blank for a new message.',
+						'type' => 'int',
+					),
+					array(
+						'name' => 'recipient',
+						'optional' => FALSE,
+						'source' => array('data' => 'recipient'),
+						'description' => 'A comma separated list of recipient usernames.',
+						'type' => 'string',
+					),
+				),
+				'access callback' => 'privatemsg_user_access',
+				'access arguments' => array('write privatemsg'),
+			),
+			'delete' => array(
+				'file' => array(
+					'type' => 'inc',
+					'module' => 'services_privatemsg',
+					'name' => 'resources/privatemsg_resource',
+				),
+				'callback' => '_msg_resource_delete',
+				'args' => array(
+					array(
+						'name' => 'pmid',
+						'optional' => FALSE,
+						'source' => array('path' => 0),
+						'description' => 'The private message to delete.',
+						'type' => 'int',
+					),
+				),
+				'access callback' => 'privatemsg_user_access',
+				'access arguments' => array('delete privatemsg'),
+			),
+		),
+		'updatemsg' => array(
+			'retrieve' => array(
+				'file' => array(
+					'type' => 'inc',
+					'module' => 'services_privatemsg',
+					'name' => 'resources/privatemsg_resource',
+				),
+				'callback' => '_updatemsg_resource_retrieve',
+				'args' => array(
+					array(
+						'name' => 'pmid',
+						'optional' => FALSE,
+						'source' => array('path' => 0),
+						'type' => 'int',
+						'description' => 'upate a message status.',
+					),
+					
+				),
+				'access callback' => 'privatemsg_user_access',
+				'access arguments append' => array('update privatemsg'),
+				//'access callback' => 'update_privatemsg_access',
+				//'access arguments append' => TRUE,
+				
+			),
+		),
+	);
+	return $privatemsg_resource;
+}
+
+/**
+ * Access function for retrieving a message.
+ */
+function _msg_resource_retrieve_access() {
+	if (!privatemsg_user_access('read privatemsg') && !privatemsg_user_access('read all private messages')) {
+		return FALSE;
+	}
+	else {
+		return TRUE;
+	}
+}
+
+/**
+ * Access function for viewing message thread.
+ */
+function services_privatemsg_view_access($thread_id) {
+	$thread = privatemsg_thread_load($thread_id);
+	if (!$thread) {
+		return FALSE;
+	}
+
+  // Do not allow access to threads without messages.
+  if (empty($thread['messages'])) {
+    // Count all messages, if there
+    return FALSE;
+  }
+  if (privatemsg_user_access('read privatemsg')) {
+    return TRUE;
+  }
+  return FALSE;
+}

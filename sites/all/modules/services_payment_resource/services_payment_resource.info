@@ -1,0 +1,14 @@
+name = Services payment resource
+description = Build service resourses for payment.
+package = Services
+core = 7.x
+
+dependencies[] = services
+dependencies[] = payment
+
+; Information added by Drupal.org packaging script on 2014-09-01
+version = "7.x-1.0-dev"
+core = "7.x"
+project = "services_payment_resource"
+datestamp = "1398648228"
+

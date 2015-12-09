@@ -48,3 +48,22 @@ foreach($result as $row)
 {
 	echo $row->title."(".$row->nid.")"."<br/>";
 }
+
+
+echo "==================隔2======================="."<br/>";
+$query = db_select('node', 'n');//->extend('PagerDefault');
+
+$query
+	->condition('type', 'general_task')
+	->fields('n', array('title'))
+	->limit(10);
+
+$result = $query->execute();
+$output = '';
+foreach($result as $row)
+{
+	$output .= $row->title."<br/>";
+}
+
+$output .= theme('pager');
+print $output;

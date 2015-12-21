@@ -5,3 +5,4 @@ sites/*/settings*.php
 sites/*/files
 sites/*/private
 task*/
+sites/all/themes/spacelab/extensions/compass_radix

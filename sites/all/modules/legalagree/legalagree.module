@@ -44,4 +44,12 @@ function legalagree_form_alter(&$form, &$form_state, $form_id){
 */
 function legalagree_user_account_form(&$form, $form_state){
 	global $user;
+	
+	//Did user agree?
+	if($form_state['input']['decision'] <> 1){
+		form_set_error('decision', t(''You must agree to the Legal Agreement before registration
+can be completed.));
+	}else{
+		watchdog('user',t('User %user agreed to legal terms',array('%user'=>$user->name)));
+	}
 }

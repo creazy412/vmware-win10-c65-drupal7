@@ -1,0 +1,42 @@
+<?php
+/**
+* Implement hook_form_alter()
+* We replace the local login validation handler with our own.
+*/
+function authdave_form_alter(&$form, &$form_state, $form_id){
+	
+	// In this simple example we authenticate on username to see whether starts with dave
+	if($form_id == 'user_login' || $form_id == 'user_login_block'){
+		$form['#validate'][] = 'authdave_user_form_validate';
+	}
+}
+
+/**
+* custom from validate function
+*/
+function authdava_user_form_validate($form, &$form_state){
+	if(!authdave_authenticate($form_state)){
+		form_set_error('name', t('Unrecognized username'));
+	}
+}
+
+/**
+* custom user authenticate function
+*/
+function authdave_authenticate($form_state){
+	//get the first four characters of the users name
+	$username = $form_state['input']['name'];//用户名
+	$testname = drupal_substr(drupal_strtolower($username),0,4);
+	
+	// check to see if the person is a dave
+	if($testname == 'dave'){
+		// if it’s a dave then use the external_login_register function
+		// to either log the person in or create a new account if that
+		// person doesn’t exist as a Drupal user
+		user_external_login_register($username, 'authdave');
+		
+		return true;
+	}else{
+		return false;
+	}
+}
